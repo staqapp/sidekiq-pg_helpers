@@ -3,7 +3,7 @@ require "active_record"
 require "sidekiq"
 require "pg"
 
-module Sidekiq::PgHelpers
+module Sidekiq::PgHelpers::Middleware
   class ConnectionRecovery
     def initialize
       @reconnection_attempts = 0

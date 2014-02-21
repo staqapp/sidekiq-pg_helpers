@@ -23,7 +23,7 @@ shared_examples "helpful middleware" do
   end
 end
 
-describe Sidekiq::PgHelpers::ConnectionRecovery do
+describe Sidekiq::PgHelpers::Middleware::ConnectionRecovery do
   let(:connection) { double(:connection,disconnect!: nil) }
   let(:connection_pool) { double(:connection_pool,remove: nil) }
   let(:logger) { double(:logger,warn: nil,error: nil) }
