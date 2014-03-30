@@ -9,7 +9,7 @@ module Sidekiq::PgHelpers::Middleware
       @reconnection_attempts = 0
     end
 
-    def call(worker_class,msg,queue)
+    def call(*args)
       yield
     rescue PG::ConnectionBad, PG::UnableToSend => e
       if @reconnection_attempts >= 4
