@@ -4,15 +4,29 @@ require "sidekiq"
 require "pg"
 
 module Sidekiq::PgHelpers::Middleware
+  # Helps keep ActiveRecord's connection pool healthy by detecting common Postgres errors
   class ConnectionRecovery
     def initialize
       @reconnection_attempts = 0
     end
 
-    def call(*args)
+    # Detects commons problems with Postgres connections and forces ActiveRecord to close and re-open
+    # the offending connection, then automatically retries the error
+    def call(*)
       yield
-    rescue PG::ConnectionBad, PG::UnableToSend => e
-      if @reconnection_attempts >= 4
+    rescue *PG_CONNECTION_ERRORS => e
+      clean_up_connection(e)
+      retry
+    rescue ActiveRecord::StatementInvalid => e
+      raise unless PG_CONNECTION_ERRORS.include?(e.original_exception.class)
+      clean_up_connection(e)
+      retry
+    end
+
+    private
+
+    def clean_up_connection(e)
+      if reconnection_attempts >= 4
         Sidekiq.logger.error "Unable to re-establish Postgres connection after five attempts, giving up"
         raise
       end
@@ -28,8 +42,11 @@ module Sidekiq::PgHelpers::Middleware
       # Ensure we get a fresh connection the next time we access an activerecord object
       ActiveRecord::Base.clear_active_connections!
 
-      @reconnection_attempts += 1
-      retry
+      self.reconnection_attempts = reconnection_attempts + 1
     end
+
+    attr_accessor :reconnection_attempts
+
+    PG_CONNECTION_ERRORS = [PG::ConnectionBad, PG::UnableToSend].freeze
   end
 end

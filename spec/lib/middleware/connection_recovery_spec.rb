@@ -57,6 +57,13 @@ describe Sidekiq::PgHelpers::Middleware::ConnectionRecovery do
     it_behaves_like "helpful middleware"
   end
 
+  context "with ActiveRecord::StatementInvalid wrapping PG::ConnectionBad" do
+    let(:exception) do
+      ActiveRecord::StatementInvalid.new("ugh",PG::ConnectionBad.new)
+    end
+    it_behaves_like "helpful middleware"
+  end
+
   context "with an unrecoverable problem" do
     let(:exception) { PG::ConnectionBad.new("server closed the connection unexpectedly") }
 
